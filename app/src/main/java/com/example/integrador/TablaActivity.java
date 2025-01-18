@@ -50,31 +50,65 @@ public class TablaActivity extends AppCompatActivity {
             }
         });
 
+        // Dentro del onClick de tu botón de guardar o modificar
         modificarButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Toast.makeText(TablaActivity.this, "Modificar presionado", Toast.LENGTH_SHORT).show();
-                // Alternar entre bloquear y desbloquear los EditText
                 modificarTabla(tabla);
             }
         });
-        guardarButton.setOnClickListener(new View.OnClickListener()
-        {
+
+        guardarButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v)
-            {
-                Toast.makeText(TablaActivity.this, "Guardar presionado", Toast.LENGTH_SHORT).show();
-                modificarTabla(tabla);
+            public void onClick(View v) {
+                boolean hayErrores = false; // Para rastrear si hay errores en las calificaciones
+                List<String> calificacionesGuardadas = new ArrayList<>(); // Lista para guardar calificaciones válidas
 
+                // Iterar solo por los IDs calificacion_1 a calificacion_10
+                for (int i = 1; i <= 10; i++) {
+                    String editTextId = "calificacion_" + i;
+                    int resID = getResources().getIdentifier(editTextId, "id", getPackageName());
+
+                    EditText editText = findViewById(resID);
+                    if (editText != null) {
+                        String texto = editText.getText().toString();
+
+                        if (!texto.isEmpty()) {
+                            try {
+                                int calificacion = Integer.parseInt(texto);
+
+                                if (calificacion > 100) {
+                                    editText.setError("La calificación no puede ser mayor a 100");
+                                    hayErrores = true;
+                                } else {
+                                    calificacionesGuardadas.add(texto); // Guardar la calificación válida
+                                }
+                            } catch (NumberFormatException e) {
+                                editText.setError("Por favor, ingrese un número válido");
+                                hayErrores = true;
+                            }
+                        } else {
+                            editText.setError("La calificación no puede estar vacía");
+                            hayErrores = true;
+                        }
+                    }
+                }
+
+                if (!hayErrores) {
+                    Toast.makeText(TablaActivity.this, "Datos guardados correctamente: " + calificacionesGuardadas, Toast.LENGTH_SHORT).show();
+
+                    // Aquí puedes implementar el guardado real, por ejemplo, en SQLite o SharedPreferences
+                } else {
+                    Toast.makeText(TablaActivity.this, "Corrige los errores antes de guardar", Toast.LENGTH_SHORT).show();
+                }
             }
         });
-
     }
-
-    /**
-     * Método para crear la tabla con los valores predeterminados usando EditText.
-     * @param tabla El GridLayout donde se añadirá el contenido.
-     */
+        /**
+         * Método para crear la tabla con los valores predeterminados usando EditText.
+         * @param tabla El GridLayout donde se añadirá el contenido.
+         */
     private void crearTablaConValoresPredeterminados(GridLayout tabla) {
         // Encabezados de la tabla (EditText también)
         agregarEditTextATabla(tabla, "Nombre", 0, 0, true);
