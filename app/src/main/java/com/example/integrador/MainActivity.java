@@ -1,5 +1,7 @@
 package com.example.integrador;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -8,59 +10,117 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import okhttp3.*;
 
-import java.util.Objects;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
-    TextView textoLogin;
-    TextView textoPassword;
-    EditText Usuario;
-    EditText Password;
-    Button Ingresar;
+
+    private EditText nombre, contraseña;
+    private Button btnLogin;
+    private TextView tvResultado;
+    private final String URL_API = "http://10.0.2.2/login.php"; // Cambia por la URL de tu servidor PHP
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-
-        textoLogin = findViewById(R.id.textoLogin);
-        textoPassword = findViewById(R.id.Password);
-        Usuario = findViewById(R.id.Usuario);
-        Password = findViewById(R.id.Password);
-        Ingresar = findViewById(R.id.Ingresar);
+        Intent CambiarContraseña = new Intent(MainActivity.this, ActivityRegistro.class);
 
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        Ingresar.setOnClickListener(new View.OnClickListener() {
+        // Enlazar vistas
+        nombre = findViewById(R.id.Usuario); // EditText para el nombre
+        contraseña = findViewById(R.id.Password); // EditText para la contraseña
+        btnLogin = findViewById(R.id.Ingresar); // Botón de inicio de sesión
+        tvResultado = findViewById(R.id.tvResultado); // TextView para mostrar resultados
+        Button btnCambiarContraseña = findViewById(R.id.cambio);
+
+        // Configurar el botón de login
+        btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                String user = Usuario.getText().toString();
-                String pass = Password.getText().toString();
-                boolean login = comprobar(user, pass);
-                if (login) {
-                    Toast.makeText(MainActivity.this, "Login successful", Toast.LENGTH_SHORT).show();
-                    // Create the Intent here, after successful login
-                    //Intent.putExtra("bloquearEditText", true);
-                    Intent TablaActivity = new Intent(MainActivity.this, TablaActivity.class);
-                    startActivity(TablaActivity);
+            public void onClick(View v) {
+                String nombreUsuario = nombre.getText().toString().trim();
+                String contraseñaUsuario = contraseña.getText().toString().trim();
+
+                if (!nombreUsuario.isEmpty() && !contraseñaUsuario.isEmpty()) {
+                    realizarLogin(nombreUsuario, contraseñaUsuario);
                 } else {
-                    Toast.makeText(MainActivity.this, "Login failed", Toast.LENGTH_SHORT).show();
+                    tvResultado.setText("Por favor, completa todos los campos.");
                 }
             }
         });
-
+        btnCambiarContraseña.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(CambiarContraseña);
+            }
+        });
     }
-    protected boolean comprobar(String user, String pass) {
-        return Objects.equals(user, "profe") && Objects.equals(pass, "1234");
+
+    private void realizarLogin(String nombreUsuario, String contraseñaUsuario) {
+        // Crear cliente OkHttp
+        OkHttpClient client = new OkHttpClient();
+
+        // Crear cuerpo JSON
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("nombre", nombreUsuario); // Cambiar "usuario" a "nombre"
+            jsonObject.put("contraseña", contraseñaUsuario); // Cambiar "password" a "contraseña"
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        // Crear RequestBody
+        RequestBody body = RequestBody.create(
+                jsonObject.toString(),
+                MediaType.parse("application/json; charset=utf-8")
+        );
+
+        // Crear Request
+        Request request = new Request.Builder()
+                .url(URL_API)
+                .post(body)
+                .build();
+
+        // Realizar la solicitud
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> tvResultado.setText("Error: " + e.getMessage()));
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String responseString = response.body().string();
+
+                    try {
+                        JSONObject responseJson = new JSONObject(responseString);
+                        boolean success = responseJson.getBoolean("success");
+                        String message = responseJson.getString("message");
+
+                        runOnUiThread(() -> {
+                            if (success) {
+                                tvResultado.setText("Login exitoso: " + message);
+                                Toast.makeText(MainActivity.this, "Bienvenido", Toast.LENGTH_SHORT).show();
+                                // Aquí puedes redirigir a otra actividad si es necesario
+                                Intent intent = new Intent(MainActivity.this, TablaActivity.class);
+                                startActivity(intent);
+                            } else {
+                                tvResultado.setText("Error: " + message);
+                            }
+                        });
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> tvResultado.setText("Error al procesar la respuesta."));
+                    }
+                } else {
+                    runOnUiThread(() -> tvResultado.setText("Error: " + response.message()));
+                }
+            }
+        });
     }
 }

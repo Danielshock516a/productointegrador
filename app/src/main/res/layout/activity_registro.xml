@@ -76,40 +76,29 @@
         android:layout_marginEnd="32dp" />
 
     <Button
-        android:id="@+id/Ingresar"
+        android:id="@+id/Cambiar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="76dp"
+        android:layout_marginTop="36dp"
         android:backgroundTint="@color/naranja"
-        android:text="Validar"
+        android:text="Cambiar"
         android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/cambio" />
+        app:layout_constraintTop_toBottomOf="@+id/Password" />
 
     <TextView
         android:id="@+id/tvResultado"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="96dp"
-        android:paddingTop="16dp"
         android:text=""
+        android:paddingTop="16dp"
         android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@+id/Cambiar"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/Ingresar" />
-
-    <Button
-        android:id="@+id/cambio"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="56dp"
-        android:backgroundTint="@color/naranja"
-        android:text="Cambiar contraseña"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.504"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/Password" />
+        android:layout_marginTop="32dp"
+        />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
