@@ -32,7 +32,7 @@ android {
 }
 
 dependencies {
-
+    implementation ("com.android.volley:volley:1.2.1")
     implementation ("com.squareup.okhttp3:okhttp:4.11.0") // Usa la última versión estable
     implementation(libs.appcompat)
     implementation(libs.material)

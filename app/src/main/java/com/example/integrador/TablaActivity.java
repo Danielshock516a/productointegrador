@@ -12,6 +12,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class TablaActivity extends AppCompatActivity {
 
@@ -62,49 +73,79 @@ public class TablaActivity extends AppCompatActivity {
         guardarButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                boolean hayErrores = false; // Para rastrear si hay errores en las calificaciones
-                List<String> calificacionesGuardadas = new ArrayList<>(); // Lista para guardar calificaciones válidas
+                List<String[]> datos = new ArrayList<>();
+                boolean hayErrores = false;
 
-                // Iterar solo por los IDs calificacion_1 a calificacion_10
+                // Recolectar datos de la tabla
                 for (int i = 1; i <= 10; i++) {
-                    String editTextId = "calificacion_" + i;
-                    int resID = getResources().getIdentifier(editTextId, "id", getPackageName());
+                    String nombre = obtenerTextoDesdeId("nombre_" + i);
+                    String registro = obtenerTextoDesdeId("registro_" + i);
+                    String calificacionTexto = obtenerTextoDesdeId("calificacion_" + i);
 
-                    EditText editText = findViewById(resID);
-                    if (editText != null) {
-                        String texto = editText.getText().toString();
+                    if (nombre.isEmpty() || registro.isEmpty() || calificacionTexto.isEmpty()) {
+                        Toast.makeText(TablaActivity.this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
+                        hayErrores = true;
+                        break;
+                    }
 
-                        if (!texto.isEmpty()) {
-                            try {
-                                int calificacion = Integer.parseInt(texto);
-
-                                if (calificacion > 100) {
-                                    editText.setError("La calificación no puede ser mayor a 100");
-                                    hayErrores = true;
-                                } else {
-                                    calificacionesGuardadas.add(texto); // Guardar la calificación válida
-                                }
-                            } catch (NumberFormatException e) {
-                                editText.setError("Por favor, ingrese un número válido");
-                                hayErrores = true;
-                            }
-                        } else {
-                            editText.setError("La calificación no puede estar vacía");
+                    try {
+                        int calificacion = Integer.parseInt(calificacionTexto);
+                        if (calificacion > 100) {
+                            Toast.makeText(TablaActivity.this, "La calificación no puede ser mayor a 100", Toast.LENGTH_SHORT).show();
                             hayErrores = true;
+                            break;
                         }
+                        datos.add(new String[]{nombre, registro, calificacionTexto});
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(TablaActivity.this, "Calificación inválida", Toast.LENGTH_SHORT).show();
+                        hayErrores = true;
+                        break;
                     }
                 }
 
                 if (!hayErrores) {
-                    Toast.makeText(TablaActivity.this, "Datos guardados correctamente: " + calificacionesGuardadas, Toast.LENGTH_SHORT).show();
-
-                    // Aquí puedes implementar el guardado real, por ejemplo, en SQLite o SharedPreferences
-                } else {
-                    Toast.makeText(TablaActivity.this, "Corrige los errores antes de guardar", Toast.LENGTH_SHORT).show();
+                    for (String[] fila : datos) {
+                        enviarDatosAlServidor(fila[0], fila[1], fila[2]);
+                    }
+                    Toast.makeText(TablaActivity.this, "Datos enviados correctamente", Toast.LENGTH_SHORT).show();
                 }
             }
         });
     }
+// Método para obtener texto desde un EditText por ID
+        private String obtenerTextoDesdeId(String id) {
+            int resID = getResources().getIdentifier(id, "id", getPackageName());
+            EditText editText = findViewById(resID);
+            return editText != null ? editText.getText().toString() : "";
+        }
+
+// Método para enviar datos al servidor
+        private void enviarDatosAlServidor(String nombre, String registro, String calificacion) {
+            String url = "http://tu_servidor/guardar_datos.php"; // Cambia por tu URL
+
+            RequestQueue queue = Volley.newRequestQueue(this);
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                    response -> {
+                        // Respuesta del servidor
+                        Toast.makeText(TablaActivity.this, response, Toast.LENGTH_SHORT).show();
+                    },
+                    error -> {
+                        // Error al conectar
+                        Toast.makeText(TablaActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                    }) {
+                @Override
+                protected Map<String, String> getParams() {
+                    Map<String, String> params = new HashMap<>();
+                    params.put("Nombre", nombre);
+                    params.put("Registro", registro);
+                    params.put("Calificacion", calificacion);
+                    return params;
+                }
+            };
+
+            queue.add(stringRequest);
+        }
+
         /**
          * Método para crear la tabla con los valores predeterminados usando EditText.
          * @param tabla El GridLayout donde se añadirá el contenido.
