@@ -20,13 +20,13 @@ try {
 $data = json_decode(file_get_contents("php://input"), true);
 
 // Validar datos
-if (!isset($data["nombre"]) || !isset($data["contraseña"])) {
+if (!isset($data["nombre"]) || !isset($data["contrasena"])) {
     echo json_encode(["success" => false, "message" => "Datos incompletos"]);
     exit();
 }
 
 $nombre = $data["nombre"];
-$contraseña = $data["contraseña"];
+$contrasena = $data["contrasena"];
 
 // Verificar si el usuario existe en la base de datos
 $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE nombre = :nombre");
@@ -36,17 +36,15 @@ $stmt->execute();
 if ($stmt->rowCount() == 1) {
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Verificar la contraseña ingresada contra la almacenada en la base de datos
-    if ($contraseña === $user["contraseña"]) { // Contraseñas simples, no se utiliza hash
-        echo json_encode(["success" => true, "message" => "Login exitoso", "id" => $user["id"]]);
+    if ($contrasena === $user["contrasena"]) {
+        echo json_encode(["success" => true, "message" => "Login exitoso"]);
     } else {
         echo json_encode(["success" => false, "message" => "Contraseña incorrecta"]);
     }
 } else {
-    // Insertar un nuevo usuario si no existe
-    $insertStmt = $pdo->prepare("INSERT INTO usuarios (nombre, contraseña) VALUES (:nombre, :contraseña)");
+    $insertStmt = $pdo->prepare("INSERT INTO usuarios (nombre, contrasena) VALUES (:nombre, :contrasena)");
     $insertStmt->bindParam(":nombre", $nombre);
-    $insertStmt->bindParam(":contraseña", $contraseña);
+    $insertStmt->bindParam(":contrasena", $contrasena);
 
     if ($insertStmt->execute()) {
         echo json_encode(["success" => true, "message" => "Usuario registrado exitosamente"]);
@@ -54,6 +52,10 @@ if ($stmt->rowCount() == 1) {
         echo json_encode(["success" => false, "message" => "Error al registrar el usuario"]);
     }
 }
+
+// Asegurarse de no enviar contenido adicional
+exit();
 ?>
+
 
 
