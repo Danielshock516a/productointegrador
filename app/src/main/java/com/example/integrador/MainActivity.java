@@ -19,7 +19,7 @@ import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
-    private EditText nombre, contraseña;
+    private EditText nombre, contrasena;
     private Button btnLogin;
     private TextView tvResultado;
     private final String URL_API = "http://10.0.2.2/login.php"; // Cambia por la URL de tu servidor PHP
@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Enlazar vistas
         nombre = findViewById(R.id.Usuario); // EditText para el nombre
-        contraseña = findViewById(R.id.Password); // EditText para la contraseña
+        contrasena = findViewById(R.id.Password); // EditText para la contraseña
         btnLogin = findViewById(R.id.Ingresar); // Botón de inicio de sesión
         tvResultado = findViewById(R.id.tvResultado); // TextView para mostrar resultados
         Button btnCambiarContraseña = findViewById(R.id.cambio);
@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 String nombreUsuario = nombre.getText().toString().trim();
-                String contraseñaUsuario = contraseña.getText().toString().trim();
+                String contraseñaUsuario = contrasena.getText().toString().trim();
 
                 if (!nombreUsuario.isEmpty() && !contraseñaUsuario.isEmpty()) {
                     realizarLogin(nombreUsuario, contraseñaUsuario);
@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         JSONObject jsonObject = new JSONObject();
         try {
             jsonObject.put("nombre", nombreUsuario); // Cambiar "usuario" a "nombre"
-            jsonObject.put("contraseña", contraseñaUsuario); // Cambiar "password" a "contraseña"
+            jsonObject.put("contrasena", contraseñaUsuario); // Cambiar "password" a "contraseña"
         } catch (JSONException e) {
             e.printStackTrace();
         }
