@@ -1,11 +1,11 @@
 package com.example.integrador;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,13 +16,14 @@ import java.util.Map;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.HashMap;
-import java.util.Map;
+import android.util.Log;
 
 public class TablaActivity extends AppCompatActivity {
 
@@ -50,6 +51,8 @@ public class TablaActivity extends AppCompatActivity {
 
         // Crear la tabla con los valores predeterminados
         crearTablaConValoresPredeterminados(tabla);
+        //borrar todos los datos al inicio
+        restaurarValoresPredeterminados(tabla);
 
         // Configuración de los botones
         borrarButton.setOnClickListener(new View.OnClickListener() {
@@ -70,83 +73,117 @@ public class TablaActivity extends AppCompatActivity {
             }
         });
 
-        guardarButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                List<String[]> datos = new ArrayList<>();
-                boolean hayErrores = false;
+        guardarButton.setOnClickListener(v -> {
+            List<Map<String, Object>> datos = new ArrayList<>(); // Cambiar tipo a Object para manejar String e int
 
-                // Recolectar datos de la tabla
-                for (int i = 1; i <= 10; i++) {
-                    String nombre = obtenerTextoDesdeId("nombre_" + i);
-                    String registro = obtenerTextoDesdeId("registro_" + i);
-                    String calificacionTexto = obtenerTextoDesdeId("calificacion_" + i);
+            // Recorremos todas las filas de la tabla
+            for (int i = 0; i < tabla.getChildCount(); i++) {
+                View row = tabla.getChildAt(i);
 
-                    if (nombre.isEmpty() || registro.isEmpty() || calificacionTexto.isEmpty()) {
-                        Toast.makeText(TablaActivity.this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
-                        hayErrores = true;
-                        break;
-                    }
+                // Verificamos si la fila es una instancia de TableRow
+                if (row instanceof TableRow) {
+                    TableRow tableRow = (TableRow) row;
 
-                    try {
-                        int calificacion = Integer.parseInt(calificacionTexto);
-                        if (calificacion > 100) {
-                            Toast.makeText(TablaActivity.this, "La calificación no puede ser mayor a 100", Toast.LENGTH_SHORT).show();
-                            hayErrores = true;
-                            break;
+                    // Asegúrate de que hay suficientes celdas (en este caso 3: Nombre, Registro, Calificación)
+                    if (tableRow.getChildCount() >= 3) {
+                        String nombre = ((TextView) tableRow.getChildAt(0)).getText().toString().trim();
+                        int registro = 0;
+                        int calificacion = 0;
+
+                        // Validar que los valores de registro y calificación sean enteros válidos
+                        try {
+                            registro = Integer.parseInt(((TextView) tableRow.getChildAt(1)).getText().toString().trim());
+                            calificacion = Integer.parseInt(((TextView) tableRow.getChildAt(2)).getText().toString().trim());
+                        } catch (NumberFormatException e) {
+                            // En caso de que no sean números válidos, se puede manejar el error
+                            Log.e("Guardar", "Registro o Calificación no es un número válido", e);
+                            continue; // Saltar esta fila si los valores no son válidos
                         }
-                        datos.add(new String[]{nombre, registro, calificacionTexto});
-                    } catch (NumberFormatException e) {
-                        Toast.makeText(TablaActivity.this, "Calificación inválida", Toast.LENGTH_SHORT).show();
-                        hayErrores = true;
-                        break;
-                    }
-                }
 
-                if (!hayErrores) {
-                    for (String[] fila : datos) {
-                        enviarDatosAlServidor(fila[0], fila[1], fila[2]);
+                        // Validamos que los campos no estén vacíos
+                        if (!nombre.isEmpty()) {
+                            // Crear un mapa con los datos de la fila
+                            Map<String, Object> filaDatos = new HashMap<>();
+                            filaDatos.put("Nombre", nombre);
+                            filaDatos.put("Registro", registro);  // Guardar como int
+                            filaDatos.put("Calificacion", calificacion);  // Guardar como int
+
+                            // Agregar la fila al listado de datos
+                            datos.add(filaDatos);
+                        }
                     }
-                    Toast.makeText(TablaActivity.this, "Datos enviados correctamente", Toast.LENGTH_SHORT).show();
                 }
             }
+
+            // Enviar los datos al servidor
+            enviarDatosComoJson(datos);
         });
     }
-// Método para obtener texto desde un EditText por ID
+    // Método para enviar los datos como un JSON al servidor
+    private void enviarDatosComoJson(List<Map<String, Object>> datos) {
+        String url = "http://10.0.2.2/tabla.php";
+
+        RequestQueue queue = Volley.newRequestQueue(this);
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
+                response -> {
+                    Toast.makeText(TablaActivity.this, response, Toast.LENGTH_SHORT).show();
+                },
+                error -> {
+                    Toast.makeText(TablaActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                }) {
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+
+            @Override
+            public byte[] getBody() {
+                try {
+                    // Crear un JSONArray que contendrá los objetos JSON
+                    JSONArray jsonArray = new JSONArray();
+
+                    // Recorrer los datos y crear un JSONObject por cada fila
+                    for (Map<String, Object> fila : datos) {
+                        JSONObject jsonObject = new JSONObject();
+
+                        // Obtener calificación y registro como enteros, ya que se almacenan como int
+                        int calificacion = (int) fila.get("Calificacion");
+                        int registro = (int) fila.get("Registro");
+
+                        // Insertar los datos en el objeto JSON
+                        jsonObject.put("Nombre", fila.get("Nombre"));
+                        jsonObject.put("Calificacion", calificacion);  // Se agrega como int
+                        jsonObject.put("Registro", registro);  // Se agrega como int
+
+                        // Agregar el objeto JSON al JSONArray
+                        jsonArray.put(jsonObject);
+                    }
+
+                    // Convertir el JSONArray a bytes con codificación UTF-8
+                    return jsonArray.toString().getBytes("utf-8");
+                } catch (Exception e) {
+                    e.printStackTrace(); // Agregar manejo de errores en caso de problemas con la conversión
+                    return null;
+                }
+            }
+        };
+
+        // Agregar la solicitud a la cola de solicitudes
+        queue.add(stringRequest);
+    }
+
+
+
+    // Método para obtener texto desde un EditText por ID
         private String obtenerTextoDesdeId(String id) {
             int resID = getResources().getIdentifier(id, "id", getPackageName());
             EditText editText = findViewById(resID);
-            return editText != null ? editText.getText().toString() : "";
+            return editText != null ? editText.getText().toString() : "1";
         }
 
-// Método para enviar datos al servidor
-        private void enviarDatosAlServidor(String nombre, String registro, String calificacion) {
-            String url = "http://tu_servidor/guardar_datos.php"; // Cambia por tu URL
 
-            RequestQueue queue = Volley.newRequestQueue(this);
-            StringRequest stringRequest = new StringRequest(Request.Method.POST, url,
-                    response -> {
-                        // Respuesta del servidor
-                        Toast.makeText(TablaActivity.this, response, Toast.LENGTH_SHORT).show();
-                    },
-                    error -> {
-                        // Error al conectar
-                        Toast.makeText(TablaActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                    }) {
-                @Override
-                protected Map<String, String> getParams() {
-                    Map<String, String> params = new HashMap<>();
-                    params.put("Nombre", nombre);
-                    params.put("Registro", registro);
-                    params.put("Calificacion", calificacion);
-                    return params;
-                }
-            };
 
-            queue.add(stringRequest);
-        }
-
-        /**
+    /**
          * Método para crear la tabla con los valores predeterminados usando EditText.
          * @param tabla El GridLayout donde se añadirá el contenido.
          */
@@ -154,13 +191,13 @@ public class TablaActivity extends AppCompatActivity {
         // Encabezados de la tabla (EditText también)
         agregarEditTextATabla(tabla, "Nombre", 0, 0, true);
         agregarEditTextATabla(tabla, "Registro", 0, 1, true);
-        agregarEditTextATabla(tabla, "Calificación", 0, 2, true);
+        agregarEditTextATabla(tabla, "calificación", 0, 2, true);
 
         // Datos predeterminados para cada fila (con EditText)
         for (int i = 1; i <= 10; i++) {
-            agregarEditTextATabla(tabla, "Alumno " + i, i, 0, true);
-            agregarEditTextATabla(tabla, "Registro " + i, i, 1, true);
-            agregarEditTextATabla(tabla, "Calificación " + i, i, 2, true);
+            agregarEditTextATabla(tabla, "Alumno" + i, i, 0, true);
+            agregarEditTextATabla(tabla, "" + i, i, 1, true);
+            agregarEditTextATabla(tabla, "" + i, i, 2, true);
         }
     }
 
@@ -185,11 +222,14 @@ public class TablaActivity extends AppCompatActivity {
      * @param bloqueado Estado de bloqueo del EditText (true para bloqueado).
      */
     private void agregarEditTextATabla(GridLayout tabla, String texto, int fila, int columna, boolean bloqueado) {
-
         EditText editText = new EditText(this);
         editText.setText(texto);
 
-        // Si bloqueado es true, el EditText estará bloqueado.
+        // Generar un ID único basado en fila y columna
+        String id = (columna == 0 ? "Nombre_" : columna == 1 ? "Registro_" : "calificacion_") + fila;
+        int resID = getResources().getIdentifier(id, "id", getPackageName());
+        editText.setId(resID);
+
         if (bloqueado) {
             bloquearEditText(editText);
         } else {
@@ -200,10 +240,11 @@ public class TablaActivity extends AppCompatActivity {
                 GridLayout.spec(fila),
                 GridLayout.spec(columna)
         );
-        params.setMargins(8, 8, 8, 8); // Márgenes opcionales
+        params.setMargins(8, 8, 8, 8);
         editText.setLayoutParams(params);
         tabla.addView(editText);
     }
+
 
     /**
      * Método para bloquear un EditText.
