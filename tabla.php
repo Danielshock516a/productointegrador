@@ -1,36 +1,51 @@
 <?php
-// Configuración de la base de datos
-$servername = "localhost";
-$username = "root"; // Cambiar por el usuario de tu base de datos
-$password = ""; // Cambiar por la contraseña de tu base de datos
-$dbname = "usuariosdb";
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
 
-// Crear conexión
-$conn = new mysqli($servername, $username, $password, $dbname);
+// Detalles de la conexión a la base de datos
+$host = "localhost";
+$dbname = "usuariosdb"; 
+$username = "root";
+$password = "";
 
-// Verificar conexión
-if ($conn->connect_error) {
-    die("Conexión fallida: " . $conn->connect_error);
+// Leer el cuerpo de la solicitud POST (asumimos que el cuerpo contiene el JSON)
+$data = file_get_contents("php://input");
+
+// Decodificar el JSON en un array asociativo
+$datos = json_decode($data, true);
+
+// Verificar si los datos fueron decodificados correctamente
+if ($datos === null) {
+    echo "Error: El JSON recibido es inválido.";
+    exit;
 }
 
-// Verificar si se recibieron datos
-if (isset($_POST['Nombre']) && isset($_POST['Registro']) && isset($_POST['Calificacion'])) {
-    $nombre = $_POST['Nombre'];
-    $registro = $_POST['Registro'];
-    $calificacion = $_POST['Calificacion'];
+// Extraer los valores del JSON con validación
+$nombre = isset($datos['Nombre']);  // Aseguramos que 'Nombre' esté presente
+$registro = isset($datos['Registro']) ? (int)$datos['Registro'] : 0; // Convertir a int
+$calificacion = isset($datos['Calificacion']) ? (int)$datos['Calificacion'] : 0; // Convertir a int
 
-    // Insertar datos en la tabla
-    $sql = "INSERT INTO calificaciones (Nombre, Registro, Calificacion) VALUES ('$nombre', '$registro', '$calificacion')";
+// Verificar que los datos esenciales no estén vacíos
+if (empty($nombre) || $registro == 0 || $calificacion == 0) {
+    echo "Error: Los datos no son válidos o incompletos.";
+    exit;
+}
 
-    if ($conn->query($sql) === TRUE) {
-        echo "Datos guardados correctamente";
-    } else {
-        echo "Error: " . $sql . "<br>" . $conn->error;
-    }
+// Conexión a la base de datos (asegúrate de que la conexión esté abierta en $conn)
+include('conexion.php');  // Asegúrate de incluir la conexión a la base de datos
+
+// Preparar la consulta para evitar inyección SQL
+$sql = $conn->prepare("INSERT INTO calificaciones (nombre, registro, calificacion) VALUES (?, ?, ?)");
+$sql->bind_param("ssi", $nombre, $registro, $calificacion);  // 's' para string, 'i' para int
+
+// Ejecutar la consulta
+if ($sql->execute()) {
+    echo "Datos insertados correctamente";
 } else {
-    echo "Faltan datos";
+    echo "Error al insertar datos: " . $sql->error;
 }
 
-// Cerrar conexión
+// Cerrar la consulta y la conexión
+$sql->close();
 $conn->close();
 ?>
